@@ -10,6 +10,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500&family=Jost:wght@400;600&display=swap">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jsQR/1.4.0/jsQR.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11.14.5/dist/sweetalert2.all.min.js"></script>
 <style>
   :root { --gold: #eab65c; --ok: #38d27a; --bad: #ff6b5b; --warn: #f2bf58; }
   * { box-sizing: border-box; }
@@ -33,15 +34,17 @@
   @keyframes giro { to { transform: rotate(360deg); } }
   .manual { display: flex; gap: 10px; padding: 8px 16px 16px; }
   .manual .btn { width: auto; padding: 0 22px; }
-  .res { position: fixed; inset: 0; z-index: 10; display: flex; flex-direction: column; justify-content: center; align-items: center; gap: 10px; padding: 28px; text-align: center; background: #000; }
-  .res::before { content: ""; position: absolute; inset: 0; opacity: .22; background: var(--c); }
-  .res > * { position: relative; }
-  .res .ic { font-size: 84px; line-height: 1; color: var(--c); }
-  .res .st { font: 600 26px "Jost", sans-serif; letter-spacing: .14em; text-transform: uppercase; color: var(--c); }
-  .res .nm { font: 500 36px "Cormorant Garamond", Georgia, serif; color: #fff; word-break: break-word; }
-  .res .ln { font-size: 17px; color: rgba(255, 255, 255, .88); }
-  .res .pay { margin-top: 6px; padding: 10px 18px; border-radius: 12px; border: 1px solid var(--warn); color: var(--warn); font-weight: 600; letter-spacing: .1em; text-transform: uppercase; }
-  .res .btn { margin-top: 22px; max-width: 360px; }
+  .swal2-container { font-family: "Jost", system-ui, sans-serif; }
+  .swal-atmos { background: #0b0904; color: #fff; border: 1px solid rgba(234, 182, 92, .45); border-radius: 18px; box-shadow: 0 20px 60px rgba(0, 0, 0, .7); padding: 26px 20px 22px; }
+  .swal-atmos.swal-ok { border-color: rgba(56, 210, 122, .8); box-shadow: 0 20px 60px rgba(0, 0, 0, .7), 0 0 50px rgba(56, 210, 122, .25); }
+  .swal-atmos.swal-bad { border-color: rgba(255, 107, 91, .85); box-shadow: 0 20px 60px rgba(0, 0, 0, .7), 0 0 50px rgba(255, 107, 91, .25); }
+  .swal-atmos .swal2-title { font: 600 22px "Jost", sans-serif; letter-spacing: .14em; text-transform: uppercase; padding: 0; color: #f6d28a; }
+  .swal-atmos.swal-ok .swal2-title { color: var(--ok); }
+  .swal-atmos.swal-bad .swal2-title { color: var(--bad); }
+  .swal-atmos .swal2-html-container { margin: 10px 4px 0; color: rgba(255, 255, 255, .88); font-size: 16px; line-height: 1.5; }
+  .swal-atmos .sw-nm { display: block; font: 500 32px "Cormorant Garamond", Georgia, serif; color: #fff; word-break: break-word; line-height: 1.15; }
+  .swal-atmos .sw-pay { display: inline-block; margin-top: 12px; padding: 9px 16px; border-radius: 12px; border: 1px solid var(--warn); color: var(--warn); font-weight: 600; letter-spacing: .08em; text-transform: uppercase; font-size: 14px; }
+  .swal-atmos .swal2-timer-progress-bar { background: #eab65c; }
 </style>
 </head>
 <body>
@@ -52,15 +55,6 @@
     <input type="text" id="man" placeholder="ATMOS-XXXXX-XXXXX" autocapitalize="characters" autocomplete="off" maxlength="17">
     <button class="btn" id="go">Validar</button>
   </div>
-</section>
-
-<section class="res" id="res" hidden>
-  <div class="ic" id="ic"></div>
-  <div class="st" id="st"></div>
-  <div class="nm" id="nm"></div>
-  <div class="ln" id="ln"></div>
-  <div class="pay" id="pay" hidden></div>
-  <button class="btn" id="next">Ler próximo</button>
 </section>
 
 <script>
@@ -99,13 +93,13 @@
     } catch (e) { }
   }
 
-  function tom(freq, ini, dur) {
+  function tom(freq, ini, dur, tipo, vol) {
     if (!ac) return;
     if (ac.state === "suspended") ac.resume();
     const t = ac.currentTime + ini, o = ac.createOscillator(), g = ac.createGain();
-    o.type = "sine"; o.frequency.value = freq;
+    o.type = tipo || "sine"; o.frequency.value = freq;
     g.gain.setValueAtTime(0.0001, t);
-    g.gain.exponentialRampToValueAtTime(0.5, t + 0.01);
+    g.gain.exponentialRampToValueAtTime(vol || 0.5, t + 0.01);
     g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
     o.connect(g); g.connect(ac.destination);
     o.start(t); o.stop(t + dur + 0.02);
@@ -113,7 +107,7 @@
 
   function sinal(vib, notas) {
     try { if (navigator.vibrate) navigator.vibrate(vib); } catch (e) { }
-    try { notas.forEach(n => tom(n[0], n[1], n[2])); } catch (e) { }
+    try { notas.forEach(n => tom(n[0], n[1], n[2], n[3], n[4])); } catch (e) { }
   }
 
   document.addEventListener("visibilitychange", () => { if (!document.hidden && ac && ac.state === "suspended") ac.resume(); });
@@ -182,24 +176,53 @@
     show(d);
   }
 
-  function show(d) {
-    const key = d.error ? "error" : d.status in VIEW ? d.status : "error";
-    $("#load").hidden = true;
-    const m = VIEW[key], r = $("#res");
-    r.style.setProperty("--c", m.c);
-    $("#ic").textContent = m.ic; $("#st").textContent = m.st;
-    $("#nm").textContent = d.nome || (d.error || "");
-    $("#ln").textContent = d.nome ? [d.tipo, key === "used" && d.at ? "Entrou em " + d.at : ""].filter(Boolean).join(" · ") : "";
-    const pay = $("#pay");
-    if (key === "ok") { entradas++; $("#count").textContent = entradas + (entradas === 1 ? " entrada" : " entradas"); }
-    pay.hidden = !(key === "ok" && /cart[aã]o/i.test(d.pagamento || ""));
-    if (!pay.hidden) { const vl = Number(d.valor); pay.textContent = "Cobrar no cartão" + (vl ? " · R$ " + vl.toFixed(2).replace(".", ",") : ""); }
-    r.hidden = false;
-    if (key === "ok") sinal([60, 60, 160], [[1175, 0, 0.12], [1568, 0.15, 0.2]]);
-    else sinal([160, 90, 160, 90, 160], [[330, 0, 0.2], [330, 0.28, 0.2], [262, 0.56, 0.35]]);
+  const esc = t => String(t == null ? "" : t).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+
+  const SOM = {
+    ok: [[60, 60, 160], [[1175, 0, 0.12], [1568, 0.15, 0.2]]],
+    used: [[160, 90, 160, 90, 160], [[330, 0, 0.2], [330, 0.28, 0.2], [262, 0.56, 0.35]]],
+    invalid: [[500], [[165, 0, 0.45, "sawtooth", 0.35], [110, 0.5, 0.8, "sawtooth", 0.35]]],
+    error: [[160, 90, 160], [[262, 0, 0.25], [220, 0.3, 0.4]]]
+  };
+
+  function libera() {
+    lastAt = Date.now();
+    $("#hint").textContent = "Aponte para o QR Code";
+    $("#man").value = "";
+    busy = false;
   }
 
-  $("#next").onclick = () => { $("#res").hidden = true; $("#hint").textContent = "Aponte para o QR Code"; $("#man").value = ""; busy = false; };
+  function show(d) {
+    const key = d.error ? "error" : d.status in VIEW ? d.status : "error";
+    const m = VIEW[key];
+    $("#load").hidden = true;
+    if (key === "ok") { entradas++; $("#count").textContent = entradas + (entradas === 1 ? " entrada" : " entradas"); }
+    sinal(SOM[key][0], SOM[key][1]);
+
+    const linhas = [];
+    if (d.nome) linhas.push('<span class="sw-nm">' + esc(d.nome) + "</span>");
+    const sub = d.nome ? [d.tipo, key === "used" && d.at ? "Entrou em " + d.at : ""].filter(Boolean).join(" · ") : d.error || "";
+    if (sub) linhas.push(esc(sub));
+    if (key === "ok" && /cart[aã]o/i.test(d.pagamento || "")) {
+      const vl = Number(d.valor);
+      linhas.push('<span class="sw-pay">Cobrar no cartão' + (vl ? " · R$ " + vl.toFixed(2).replace(".", ",") : "") + "</span>");
+    }
+
+    if (!window.Swal) { $("#hint").textContent = m.st + (d.nome ? " · " + d.nome : ""); setTimeout(libera, 3000); return; }
+    Swal.fire({
+      icon: key === "ok" ? "success" : key === "used" ? "warning" : "error",
+      title: m.st,
+      html: linhas.join("<br>"),
+      timer: 3000, timerProgressBar: true, showConfirmButton: false,
+      allowOutsideClick: false, allowEscapeKey: false,
+      customClass: { popup: "swal-atmos " + (key === "ok" ? "swal-ok" : "swal-bad") },
+      buttonsStyling: false, background: "#0b0904", color: "#fff", backdrop: "rgba(0, 0, 0, .78)",
+      iconColor: key === "ok" ? "#38d27a" : key === "used" ? "#f2bf58" : "#ff6b5b",
+      scrollbarPadding: false, heightAuto: false, returnFocus: false,
+      didClose: libera
+    });
+  }
+
   $("#retry").onclick = start;
   $("#go").onclick = () => { const c = $("#man").value.trim(); if (c) { lastCode = ""; check(c); } };
   $("#man").addEventListener("keydown", e => { if (e.key === "Enter") $("#go").click(); });
