@@ -28,6 +28,9 @@
   .frame { position: absolute; inset: 0; margin: auto; width: min(68%, 280px); aspect-ratio: 1; border-radius: 18px; border: 2px solid var(--gold); box-shadow: 0 0 0 100vmax rgba(0, 0, 0, .45); pointer-events: none; }
   .hint { position: absolute; left: 0; right: 0; bottom: 14px; text-align: center; font-size: 13px; letter-spacing: .12em; text-transform: uppercase; color: #fff; text-shadow: 0 1px 6px #000; }
   .retry { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); width: auto; padding: 14px 26px; }
+  .load { position: absolute; inset: 0; z-index: 3; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 14px; background: rgba(0, 0, 0, .62); backdrop-filter: blur(2px); font-size: 14px; letter-spacing: .16em; text-transform: uppercase; color: #f6d28a; }
+  .spin { width: 58px; height: 58px; border-radius: 50%; border: 4px solid rgba(234, 182, 92, .2); border-top-color: var(--gold); animation: giro .8s linear infinite; }
+  @keyframes giro { to { transform: rotate(360deg); } }
   .manual { display: flex; gap: 10px; padding: 8px 16px 16px; }
   .manual .btn { width: auto; padding: 0 22px; }
   .res { position: fixed; inset: 0; z-index: 10; display: flex; flex-direction: column; justify-content: center; align-items: center; gap: 10px; padding: 28px; text-align: center; background: #000; }
@@ -44,7 +47,7 @@
 <body>
 <section class="screen">
   <header><h1>Portaria</h1><span id="count">0 entradas</span></header>
-  <div class="cam"><video id="v" playsinline muted></video><div class="frame"></div><div class="hint" id="hint">Aponte para o QR Code</div><button class="btn retry" id="retry" hidden>Ativar câmera</button></div>
+  <div class="cam"><video id="v" playsinline muted></video><div class="frame"></div><div class="hint" id="hint">Toque para iniciar a leitura</div><div class="load" id="load" hidden><div class="spin"></div><span>Lendo ingresso…</span></div><button class="btn retry" id="retry">Iniciar leitura</button></div>
   <div class="manual">
     <input type="text" id="man" placeholder="ATMOS-XXXXX-XXXXX" autocapitalize="characters" autocomplete="off" maxlength="17">
     <button class="btn" id="go">Validar</button>
@@ -76,8 +79,48 @@
     NotReadableError: "A câmera está em uso por outro app. Feche-o e tente de novo"
   };
 
+  let ac = null, mudo = null;
+
+  function wavMudo() {
+    const n = 800, b = new Uint8Array(44 + n), d = new DataView(b.buffer);
+    const w = (o, t) => [...t].forEach((c, i) => { b[o + i] = c.charCodeAt(0); });
+    w(0, "RIFF"); d.setUint32(4, 36 + n, true); w(8, "WAVEfmt "); d.setUint32(16, 16, true);
+    d.setUint16(20, 1, true); d.setUint16(22, 1, true); d.setUint32(24, 8000, true); d.setUint32(28, 8000, true);
+    d.setUint16(32, 1, true); d.setUint16(34, 8, true); w(36, "data"); d.setUint32(40, n, true); b.fill(128, 44);
+    return URL.createObjectURL(new Blob([b], { type: "audio/wav" }));
+  }
+
+  function liberaAudio() {
+    try { if (navigator.audioSession) navigator.audioSession.type = "playback"; } catch (e) { }
+    try { ac = ac || new (window.AudioContext || window.webkitAudioContext)(); ac.resume(); } catch (e) { }
+    try {
+      if (!mudo) { mudo = new Audio(wavMudo()); mudo.loop = true; mudo.setAttribute("playsinline", ""); }
+      mudo.play().catch(() => { });
+    } catch (e) { }
+  }
+
+  function tom(freq, ini, dur) {
+    if (!ac) return;
+    if (ac.state === "suspended") ac.resume();
+    const t = ac.currentTime + ini, o = ac.createOscillator(), g = ac.createGain();
+    o.type = "sine"; o.frequency.value = freq;
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.exponentialRampToValueAtTime(0.5, t + 0.01);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+    o.connect(g); g.connect(ac.destination);
+    o.start(t); o.stop(t + dur + 0.02);
+  }
+
+  function sinal(vib, notas) {
+    try { if (navigator.vibrate) navigator.vibrate(vib); } catch (e) { }
+    try { notas.forEach(n => tom(n[0], n[1], n[2])); } catch (e) { }
+  }
+
+  document.addEventListener("visibilitychange", () => { if (!document.hidden && ac && ac.state === "suspended") ac.resume(); });
+
   async function start() {
     $("#retry").hidden = true;
+    liberaAudio();
     if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
       $("#hint").textContent = "Abra este link direto no Chrome ou Safari (não dentro de outro app)";
       $("#retry").hidden = false;
@@ -90,6 +133,7 @@
       requestAnimationFrame(tick);
     } catch (e) {
       $("#hint").textContent = (MSG[e.name] || "Câmera indisponível") + ". Ou use o código manual";
+      $("#retry").textContent = "Tentar de novo";
       $("#retry").hidden = false;
     }
   }
@@ -131,6 +175,7 @@
     const code = String(raw).trim().toUpperCase();
     if (busy || (code === lastCode && Date.now() - lastAt < 4000)) return;
     busy = true; lastCode = code; lastAt = Date.now();
+    $("#load").hidden = false; sinal(90, [[880, 0, 0.12]]);
     $("#hint").textContent = "Validando…";
     let d;
     try { d = await api({ code }); } catch (e) { d = { error: "Sem conexão." }; }
@@ -139,6 +184,7 @@
 
   function show(d) {
     const key = d.error ? "error" : d.status in VIEW ? d.status : "error";
+    $("#load").hidden = true;
     const m = VIEW[key], r = $("#res");
     r.style.setProperty("--c", m.c);
     $("#ic").textContent = m.ic; $("#st").textContent = m.st;
@@ -149,7 +195,8 @@
     pay.hidden = !(key === "ok" && /cart[aã]o/i.test(d.pagamento || ""));
     if (!pay.hidden) { const vl = Number(d.valor); pay.textContent = "Cobrar no cartão" + (vl ? " · R$ " + vl.toFixed(2).replace(".", ",") : ""); }
     r.hidden = false;
-    if (navigator.vibrate) navigator.vibrate(key === "ok" ? 120 : [120, 80, 120]);
+    if (key === "ok") sinal([60, 60, 160], [[1175, 0, 0.12], [1568, 0.15, 0.2]]);
+    else sinal([160, 90, 160, 90, 160], [[330, 0, 0.2], [330, 0.28, 0.2], [262, 0.56, 0.35]]);
   }
 
   $("#next").onclick = () => { $("#res").hidden = true; $("#hint").textContent = "Aponte para o QR Code"; $("#man").value = ""; busy = false; };
@@ -157,7 +204,6 @@
   $("#go").onclick = () => { const c = $("#man").value.trim(); if (c) { lastCode = ""; check(c); } };
   $("#man").addEventListener("keydown", e => { if (e.key === "Enter") $("#go").click(); });
 
-  start();
 </script>
 </body>
 </html>
