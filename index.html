@@ -61,6 +61,20 @@
   const $ = s => document.querySelector(s);
   let busy = false, entradas = 0, lastCode = "", lastAt = 0;
 
+  function setCount(n) {
+    entradas = n;
+    $("#count").textContent = n + (n === 1 ? " entrada" : " entradas");
+    try { localStorage.setItem("atmos_entradas", String(n)); } catch (e) { }
+  }
+
+  async function atualizaTotal() {
+    if (busy) return;
+    try {
+      const d = await api({ count: true });
+      if (typeof d.total === "number" && !busy) setCount(d.total);
+    } catch (e) { }
+  }
+
   async function api(body) {
     const r = await fetch("/api/checkin", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
     return r.json().catch(() => ({ error: "Erro. Tente de novo." }));
@@ -196,7 +210,7 @@
     const key = d.error ? "error" : d.status in VIEW ? d.status : "error";
     const m = VIEW[key];
     $("#load").hidden = true;
-    if (key === "ok") { entradas++; $("#count").textContent = entradas + (entradas === 1 ? " entrada" : " entradas"); }
+    if (typeof d.total === "number") setCount(d.total); else if (key === "ok") setCount(entradas + 1);
     sinal(SOM[key][0], SOM[key][1]);
 
     const linhas = [];
@@ -224,6 +238,9 @@
   }
 
   $("#retry").onclick = start;
+  try { const c = parseInt(localStorage.getItem("atmos_entradas"), 10); if (c >= 0) setCount(c); } catch (e) { }
+  atualizaTotal();
+  setInterval(atualizaTotal, 30000);
   $("#go").onclick = () => { const c = $("#man").value.trim(); if (c) { lastCode = ""; check(c); } };
   $("#man").addEventListener("keydown", e => { if (e.key === "Enter") $("#go").click(); });
 
