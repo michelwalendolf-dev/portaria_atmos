@@ -1,373 +1,130 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="pt-BR">
-  <head>
-    <meta charset="utf-8" />
-    <meta
-      name="viewport"
-      content="width=device-width, initial-scale=1, viewport-fit=cover"
-    />
-    <meta name="robots" content="noindex" />
-    <meta name="theme-color" content="#000000" />
-    <title>Portaria · Atmos Sunset</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link
-      rel="stylesheet"
-      href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500&family=Jost:wght@400;600&display=swap"
-    />
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jsQR/1.4.0/jsQR.min.js"></script>
-    <style>
-      :root {
-        --gold: #eab65c;
-        --ok: #38d27a;
-        --bad: #ff6b5b;
-        --warn: #f2bf58;
-      }
-      * {
-        box-sizing: border-box;
-      }
-      html,
-      body {
-        height: 100%;
-        margin: 0;
-        background: #000;
-        color: #fff;
-        font-family: "Jost", system-ui, sans-serif;
-      }
-      body {
-        padding: env(safe-area-inset-top) 0 env(safe-area-inset-bottom);
-        display: flex;
-        flex-direction: column;
-      }
-      [hidden] {
-        display: none !important;
-      }
-      .screen {
-        flex: 1;
-        display: flex;
-        flex-direction: column;
-        min-height: 0;
-      }
-      input[type="text"] {
-        width: 100%;
-        padding: 15px;
-        border-radius: 12px;
-        border: 1px solid rgba(234, 182, 92, 0.4);
-        background: rgba(255, 255, 255, 0.05);
-        color: #fff;
-        font:
-          400 16px "Jost",
-          sans-serif;
-        letter-spacing: 0.08em;
-      }
-      input:focus {
-        outline: 2px solid var(--gold);
-        outline-offset: 1px;
-      }
-      .btn {
-        display: block;
-        width: 100%;
-        border: 0;
-        border-radius: 12px;
-        padding: 15px;
-        cursor: pointer;
-        font:
-          600 14px "Jost",
-          sans-serif;
-        letter-spacing: 0.2em;
-        text-transform: uppercase;
-        color: #1a1204;
-        background: linear-gradient(180deg, #fff6d6, #f2bf58);
-      }
-      header {
-        padding: 14px 16px 6px;
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-      }
-      header h1 {
-        margin: 0;
-        font:
-          500 26px "Cormorant Garamond",
-          Georgia,
-          serif;
-        color: #f6d28a;
-      }
-      header span {
-        font-size: 12px;
-        letter-spacing: 0.15em;
-        text-transform: uppercase;
-        color: var(--gold);
-      }
-      .cam {
-        position: relative;
-        flex: 1;
-        min-height: 0;
-        margin: 8px 16px;
-        border-radius: 18px;
-        overflow: hidden;
-        background: #0b0904;
-        border: 1px solid rgba(234, 182, 92, 0.35);
-      }
-      video {
-        width: 100%;
-        height: 100%;
-        object-fit: cover;
-        display: block;
-      }
-      .frame {
-        position: absolute;
-        inset: 0;
-        margin: auto;
-        width: min(68%, 280px);
-        aspect-ratio: 1;
-        border-radius: 18px;
-        border: 2px solid var(--gold);
-        box-shadow: 0 0 0 100vmax rgba(0, 0, 0, 0.45);
-        pointer-events: none;
-      }
-      .hint {
-        position: absolute;
-        left: 0;
-        right: 0;
-        bottom: 14px;
-        text-align: center;
-        font-size: 13px;
-        letter-spacing: 0.12em;
-        text-transform: uppercase;
-        color: #fff;
-        text-shadow: 0 1px 6px #000;
-      }
-      .manual {
-        display: flex;
-        gap: 10px;
-        padding: 8px 16px 16px;
-      }
-      .manual .btn {
-        width: auto;
-        padding: 0 22px;
-      }
-      .res {
-        position: fixed;
-        inset: 0;
-        z-index: 10;
-        display: flex;
-        flex-direction: column;
-        justify-content: center;
-        align-items: center;
-        gap: 10px;
-        padding: 28px;
-        text-align: center;
-        background: #000;
-      }
-      .res::before {
-        content: "";
-        position: absolute;
-        inset: 0;
-        opacity: 0.22;
-        background: var(--c);
-      }
-      .res > * {
-        position: relative;
-      }
-      .res .ic {
-        font-size: 84px;
-        line-height: 1;
-        color: var(--c);
-      }
-      .res .st {
-        font:
-          600 26px "Jost",
-          sans-serif;
-        letter-spacing: 0.14em;
-        text-transform: uppercase;
-        color: var(--c);
-      }
-      .res .nm {
-        font:
-          500 36px "Cormorant Garamond",
-          Georgia,
-          serif;
-        color: #fff;
-        word-break: break-word;
-      }
-      .res .ln {
-        font-size: 17px;
-        color: rgba(255, 255, 255, 0.88);
-      }
-      .res .pay {
-        margin-top: 6px;
-        padding: 10px 18px;
-        border-radius: 12px;
-        border: 1px solid var(--warn);
-        color: var(--warn);
-        font-weight: 600;
-        letter-spacing: 0.1em;
-        text-transform: uppercase;
-      }
-      .res .btn {
-        margin-top: 22px;
-        max-width: 360px;
-      }
-    </style>
-  </head>
-  <body>
-    <section class="screen">
-      <header>
-        <h1>Portaria</h1>
-        <span id="count">0 entradas</span>
-      </header>
-      <div class="cam">
-        <video id="v" playsinline muted></video>
-        <div class="frame"></div>
-        <div class="hint" id="hint">Aponte para o QR Code</div>
-      </div>
-      <div class="manual">
-        <input
-          type="text"
-          id="man"
-          placeholder="ATMOS-XXXXX-XXXXX"
-          autocapitalize="characters"
-          autocomplete="off"
-          maxlength="17"
-        />
-        <button class="btn" id="go">Validar</button>
-      </div>
-    </section>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex">
+<meta name="theme-color" content="#000000">
+<title>Portaria · Atmos Sunset</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500&family=Jost:wght@400;600&display=swap">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jsQR/1.4.0/jsQR.min.js"></script>
+<style>
+  :root { --gold: #eab65c; --ok: #38d27a; --bad: #ff6b5b; --warn: #f2bf58; }
+  * { box-sizing: border-box; }
+  html, body { height: 100%; margin: 0; background: #000; color: #fff; font-family: "Jost", system-ui, sans-serif; }
+  body { padding: env(safe-area-inset-top) 0 env(safe-area-inset-bottom); display: flex; flex-direction: column; }
+  [hidden] { display: none !important; }
+  .screen { flex: 1; display: flex; flex-direction: column; min-height: 0; }
+  input[type=text] { width: 100%; padding: 15px; border-radius: 12px; border: 1px solid rgba(234, 182, 92, .4); background: rgba(255, 255, 255, .05); color: #fff; font: 400 16px "Jost", sans-serif; letter-spacing: .08em; }
+  input:focus { outline: 2px solid var(--gold); outline-offset: 1px; }
+  .btn { display: block; width: 100%; border: 0; border-radius: 12px; padding: 15px; cursor: pointer; font: 600 14px "Jost", sans-serif; letter-spacing: .2em; text-transform: uppercase; color: #1a1204; background: linear-gradient(180deg, #fff6d6, #f2bf58); }
+  header { padding: 14px 16px 6px; display: flex; justify-content: space-between; align-items: center; }
+  header h1 { margin: 0; font: 500 26px "Cormorant Garamond", Georgia, serif; color: #f6d28a; }
+  header span { font-size: 12px; letter-spacing: .15em; text-transform: uppercase; color: var(--gold); }
+  .cam { position: relative; flex: 1; min-height: 0; margin: 8px 16px; border-radius: 18px; overflow: hidden; background: #0b0904; border: 1px solid rgba(234, 182, 92, .35); }
+  video { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .frame { position: absolute; inset: 0; margin: auto; width: min(68%, 280px); aspect-ratio: 1; border-radius: 18px; border: 2px solid var(--gold); box-shadow: 0 0 0 100vmax rgba(0, 0, 0, .45); pointer-events: none; }
+  .hint { position: absolute; left: 0; right: 0; bottom: 14px; text-align: center; font-size: 13px; letter-spacing: .12em; text-transform: uppercase; color: #fff; text-shadow: 0 1px 6px #000; }
+  .manual { display: flex; gap: 10px; padding: 8px 16px 16px; }
+  .manual .btn { width: auto; padding: 0 22px; }
+  .res { position: fixed; inset: 0; z-index: 10; display: flex; flex-direction: column; justify-content: center; align-items: center; gap: 10px; padding: 28px; text-align: center; background: #000; }
+  .res::before { content: ""; position: absolute; inset: 0; opacity: .22; background: var(--c); }
+  .res > * { position: relative; }
+  .res .ic { font-size: 84px; line-height: 1; color: var(--c); }
+  .res .st { font: 600 26px "Jost", sans-serif; letter-spacing: .14em; text-transform: uppercase; color: var(--c); }
+  .res .nm { font: 500 36px "Cormorant Garamond", Georgia, serif; color: #fff; word-break: break-word; }
+  .res .ln { font-size: 17px; color: rgba(255, 255, 255, .88); }
+  .res .pay { margin-top: 6px; padding: 10px 18px; border-radius: 12px; border: 1px solid var(--warn); color: var(--warn); font-weight: 600; letter-spacing: .1em; text-transform: uppercase; }
+  .res .btn { margin-top: 22px; max-width: 360px; }
+</style>
+</head>
+<body>
+<section class="screen">
+  <header><h1>Portaria</h1><span id="count">0 entradas</span></header>
+  <div class="cam"><video id="v" playsinline muted></video><div class="frame"></div><div class="hint" id="hint">Aponte para o QR Code</div></div>
+  <div class="manual">
+    <input type="text" id="man" placeholder="ATMOS-XXXXX-XXXXX" autocapitalize="characters" autocomplete="off" maxlength="17">
+    <button class="btn" id="go">Validar</button>
+  </div>
+</section>
 
-    <section class="res" id="res" hidden>
-      <div class="ic" id="ic"></div>
-      <div class="st" id="st"></div>
-      <div class="nm" id="nm"></div>
-      <div class="ln" id="ln"></div>
-      <div class="pay" id="pay" hidden></div>
-      <button class="btn" id="next">Ler próximo</button>
-    </section>
+<section class="res" id="res" hidden>
+  <div class="ic" id="ic"></div>
+  <div class="st" id="st"></div>
+  <div class="nm" id="nm"></div>
+  <div class="ln" id="ln"></div>
+  <div class="pay" id="pay" hidden></div>
+  <button class="btn" id="next">Ler próximo</button>
+</section>
 
-    <script>
-      const $ = (s) => document.querySelector(s);
-      let busy = false,
-        entradas = 0,
-        lastCode = "",
-        lastAt = 0;
+<script>
+  const $ = s => document.querySelector(s);
+  let busy = false, entradas = 0, lastCode = "", lastAt = 0;
 
-      async function api(body) {
-        const r = await fetch("/api/checkin", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(body),
-        });
-        return r.json().catch(() => ({ error: "Erro. Tente de novo." }));
-      }
+  async function api(body) {
+    const r = await fetch("/api/checkin", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+    return r.json().catch(() => ({ error: "Erro. Tente de novo." }));
+  }
 
-      async function start() {
-        try {
-          const stream = await navigator.mediaDevices.getUserMedia({
-            video: {
-              facingMode: { ideal: "environment" },
-              width: { ideal: 1280 },
-            },
-            audio: false,
-          });
-          const v = $("#v");
-          v.srcObject = stream;
-          await v.play();
-          requestAnimationFrame(tick);
-        } catch (e) {
-          $("#hint").textContent = "Câmera indisponível: use o código manual";
-        }
-      }
+  async function start() {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: { ideal: "environment" }, width: { ideal: 1280 } }, audio: false });
+      const v = $("#v"); v.srcObject = stream; await v.play(); requestAnimationFrame(tick);
+    } catch (e) { $("#hint").textContent = "Câmera indisponível: use o código manual"; }
+  }
 
-      const cv = document.createElement("canvas"),
-        cx = cv.getContext("2d", { willReadFrequently: true });
-      function tick() {
-        const v = $("#v");
-        if (!busy && v.readyState >= 2 && v.videoWidth) {
-          const k = Math.min(1, 640 / v.videoWidth);
-          cv.width = v.videoWidth * k;
-          cv.height = v.videoHeight * k;
-          cx.drawImage(v, 0, 0, cv.width, cv.height);
-          const q =
-            window.jsQR &&
-            jsQR(
-              cx.getImageData(0, 0, cv.width, cv.height).data,
-              cv.width,
-              cv.height,
-              { inversionAttempts: "dontInvert" },
-            );
-          if (q && q.data) check(q.data);
-        }
-        requestAnimationFrame(tick);
-      }
+  const cv = document.createElement("canvas"), cx = cv.getContext("2d", { willReadFrequently: true });
+  function tick() {
+    const v = $("#v");
+    if (!busy && v.readyState >= 2 && v.videoWidth) {
+      const k = Math.min(1, 640 / v.videoWidth);
+      cv.width = v.videoWidth * k; cv.height = v.videoHeight * k;
+      cx.drawImage(v, 0, 0, cv.width, cv.height);
+      const q = window.jsQR && jsQR(cx.getImageData(0, 0, cv.width, cv.height).data, cv.width, cv.height, { inversionAttempts: "dontInvert" });
+      if (q && q.data) check(q.data);
+    }
+    requestAnimationFrame(tick);
+  }
 
-      const VIEW = {
-        ok: { c: "var(--ok)", ic: "✓", st: "Entrada liberada" },
-        used: { c: "var(--bad)", ic: "✕", st: "Já utilizado" },
-        invalid: { c: "var(--bad)", ic: "✕", st: "Ingresso inválido" },
-        error: { c: "var(--warn)", ic: "!", st: "Erro" },
-      };
+  const VIEW = {
+    ok: { c: "var(--ok)", ic: "✓", st: "Entrada liberada" },
+    used: { c: "var(--bad)", ic: "✕", st: "Já utilizado" },
+    invalid: { c: "var(--bad)", ic: "✕", st: "Ingresso inválido" },
+    error: { c: "var(--warn)", ic: "!", st: "Erro" }
+  };
 
-      async function check(raw) {
-        const code = String(raw).trim().toUpperCase();
-        if (busy || (code === lastCode && Date.now() - lastAt < 4000)) return;
-        busy = true;
-        lastCode = code;
-        lastAt = Date.now();
-        $("#hint").textContent = "Validando…";
-        let d;
-        try {
-          d = await api({ code });
-        } catch (e) {
-          d = { error: "Sem conexão." };
-        }
-        show(d);
-      }
+  async function check(raw) {
+    const code = String(raw).trim().toUpperCase();
+    if (busy || (code === lastCode && Date.now() - lastAt < 4000)) return;
+    busy = true; lastCode = code; lastAt = Date.now();
+    $("#hint").textContent = "Validando…";
+    let d;
+    try { d = await api({ code }); } catch (e) { d = { error: "Sem conexão." }; }
+    show(d);
+  }
 
-      function show(d) {
-        const key = d.error ? "error" : d.status in VIEW ? d.status : "error";
-        const m = VIEW[key],
-          r = $("#res");
-        r.style.setProperty("--c", m.c);
-        $("#ic").textContent = m.ic;
-        $("#st").textContent = m.st;
-        $("#nm").textContent = d.nome || d.error || "";
-        $("#ln").textContent = d.nome
-          ? [d.tipo, key === "used" && d.at ? "entrou em " + d.at : ""]
-              .filter(Boolean)
-              .join(" · ")
-          : "";
-        const pay = $("#pay");
-        if (key === "ok") {
-          entradas++;
-          $("#count").textContent =
-            entradas + (entradas === 1 ? " entrada" : " entradas");
-        }
-        pay.hidden = !(key === "ok" && /entrada/i.test(d.pagamento || ""));
-        if (!pay.hidden)
-          pay.textContent = "Cobrar no cartão · " + (d.valor || "");
-        r.hidden = false;
-        if (navigator.vibrate)
-          navigator.vibrate(key === "ok" ? 120 : [120, 80, 120]);
-      }
+  function show(d) {
+    const key = d.error ? "error" : d.status in VIEW ? d.status : "error";
+    const m = VIEW[key], r = $("#res");
+    r.style.setProperty("--c", m.c);
+    $("#ic").textContent = m.ic; $("#st").textContent = m.st;
+    $("#nm").textContent = d.nome || (d.error || "");
+    $("#ln").textContent = d.nome ? [d.tipo, key === "used" && d.at ? "Entrou em " + d.at : ""].filter(Boolean).join(" · ") : "";
+    const pay = $("#pay");
+    if (key === "ok") { entradas++; $("#count").textContent = entradas + (entradas === 1 ? " entrada" : " entradas"); }
+    pay.hidden = !(key === "ok" && /cart[aã]o/i.test(d.pagamento || ""));
+    if (!pay.hidden) { const vl = Number(d.valor); pay.textContent = "Cobrar no cartão" + (vl ? " · R$ " + vl.toFixed(2).replace(".", ",") : ""); }
+    r.hidden = false;
+    if (navigator.vibrate) navigator.vibrate(key === "ok" ? 120 : [120, 80, 120]);
+  }
 
-      $("#next").onclick = () => {
-        $("#res").hidden = true;
-        $("#hint").textContent = "Aponte para o QR Code";
-        $("#man").value = "";
-        busy = false;
-      };
-      $("#go").onclick = () => {
-        const c = $("#man").value.trim();
-        if (c) {
-          lastCode = "";
-          check(c);
-        }
-      };
-      $("#man").addEventListener("keydown", (e) => {
-        if (e.key === "Enter") $("#go").click();
-      });
+  $("#next").onclick = () => { $("#res").hidden = true; $("#hint").textContent = "Aponte para o QR Code"; $("#man").value = ""; busy = false; };
+  $("#go").onclick = () => { const c = $("#man").value.trim(); if (c) { lastCode = ""; check(c); } };
+  $("#man").addEventListener("keydown", e => { if (e.key === "Enter") $("#go").click(); });
 
-      start();
-    </script>
-  </body>
+  start();
+</script>
+</body>
 </html>
