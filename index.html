@@ -27,6 +27,7 @@
   video { width: 100%; height: 100%; object-fit: cover; display: block; }
   .frame { position: absolute; inset: 0; margin: auto; width: min(68%, 280px); aspect-ratio: 1; border-radius: 18px; border: 2px solid var(--gold); box-shadow: 0 0 0 100vmax rgba(0, 0, 0, .45); pointer-events: none; }
   .hint { position: absolute; left: 0; right: 0; bottom: 14px; text-align: center; font-size: 13px; letter-spacing: .12em; text-transform: uppercase; color: #fff; text-shadow: 0 1px 6px #000; }
+  .retry { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); width: auto; padding: 14px 26px; }
   .manual { display: flex; gap: 10px; padding: 8px 16px 16px; }
   .manual .btn { width: auto; padding: 0 22px; }
   .res { position: fixed; inset: 0; z-index: 10; display: flex; flex-direction: column; justify-content: center; align-items: center; gap: 10px; padding: 28px; text-align: center; background: #000; }
@@ -43,7 +44,7 @@
 <body>
 <section class="screen">
   <header><h1>Portaria</h1><span id="count">0 entradas</span></header>
-  <div class="cam"><video id="v" playsinline muted></video><div class="frame"></div><div class="hint" id="hint">Aponte para o QR Code</div></div>
+  <div class="cam"><video id="v" playsinline muted></video><div class="frame"></div><div class="hint" id="hint">Aponte para o QR Code</div><button class="btn retry" id="retry" hidden>Ativar câmera</button></div>
   <div class="manual">
     <input type="text" id="man" placeholder="ATMOS-XXXXX-XXXXX" autocapitalize="characters" autocomplete="off" maxlength="17">
     <button class="btn" id="go">Validar</button>
@@ -68,22 +69,53 @@
     return r.json().catch(() => ({ error: "Erro. Tente de novo." }));
   }
 
+  const MSG = {
+    NotAllowedError: "Permita o acesso à câmera nas configurações do navegador",
+    SecurityError: "Permita o acesso à câmera nas configurações do navegador",
+    NotFoundError: "Nenhuma câmera encontrada neste aparelho",
+    NotReadableError: "A câmera está em uso por outro app. Feche-o e tente de novo"
+  };
+
   async function start() {
+    $("#retry").hidden = true;
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+      $("#hint").textContent = "Abra este link direto no Chrome ou Safari (não dentro de outro app)";
+      $("#retry").hidden = false;
+      return;
+    }
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: { ideal: "environment" }, width: { ideal: 1280 } }, audio: false });
-      const v = $("#v"); v.srcObject = stream; await v.play(); requestAnimationFrame(tick);
-    } catch (e) { $("#hint").textContent = "Câmera indisponível: use o código manual"; }
+      const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: { ideal: "environment" }, width: { ideal: 1920 }, height: { ideal: 1080 } }, audio: false });
+      const v = $("#v"); v.srcObject = stream; await v.play();
+      $("#hint").textContent = window.jsQR || det ? "Aponte para o QR Code" : "Leitor não carregou. Recarregue a página";
+      requestAnimationFrame(tick);
+    } catch (e) {
+      $("#hint").textContent = (MSG[e.name] || "Câmera indisponível") + ". Ou use o código manual";
+      $("#retry").hidden = false;
+    }
   }
 
+  let det = null;
+  try { if ("BarcodeDetector" in window) det = new BarcodeDetector({ formats: ["qr_code"] }); } catch (e) { det = null; }
   const cv = document.createElement("canvas"), cx = cv.getContext("2d", { willReadFrequently: true });
-  function tick() {
+  let scanning = false;
+
+  async function tick() {
     const v = $("#v");
-    if (!busy && v.readyState >= 2 && v.videoWidth) {
-      const k = Math.min(1, 640 / v.videoWidth);
-      cv.width = v.videoWidth * k; cv.height = v.videoHeight * k;
-      cx.drawImage(v, 0, 0, cv.width, cv.height);
-      const q = window.jsQR && jsQR(cx.getImageData(0, 0, cv.width, cv.height).data, cv.width, cv.height, { inversionAttempts: "dontInvert" });
-      if (q && q.data) check(q.data);
+    if (!busy && !scanning && v.readyState >= 2 && v.videoWidth) {
+      scanning = true;
+      try {
+        let data = "";
+        if (det) { const r = await det.detect(v); if (r.length) data = r[0].rawValue; }
+        if (!data && window.jsQR) {
+          const k = Math.min(1, 960 / v.videoWidth);
+          cv.width = Math.round(v.videoWidth * k); cv.height = Math.round(v.videoHeight * k);
+          cx.drawImage(v, 0, 0, cv.width, cv.height);
+          const q = jsQR(cx.getImageData(0, 0, cv.width, cv.height).data, cv.width, cv.height, { inversionAttempts: "dontInvert" });
+          if (q && q.data) data = q.data;
+        }
+        if (data) check(data);
+      } catch (e) { }
+      scanning = false;
     }
     requestAnimationFrame(tick);
   }
@@ -121,6 +153,7 @@
   }
 
   $("#next").onclick = () => { $("#res").hidden = true; $("#hint").textContent = "Aponte para o QR Code"; $("#man").value = ""; busy = false; };
+  $("#retry").onclick = start;
   $("#go").onclick = () => { const c = $("#man").value.trim(); if (c) { lastCode = ""; check(c); } };
   $("#man").addEventListener("keydown", e => { if (e.key === "Enter") $("#go").click(); });
 
