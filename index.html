@@ -115,14 +115,13 @@
     entradas = n;
     $("#n").textContent = n;
     $("#nl").textContent = n === 1 ? "entrada" : "entradas";
-    try { localStorage.setItem("atmos_entradas", String(n)); } catch (e) { }
   }
 
+  /* O total é sempre o que a planilha informa; nunca somado no aparelho */
   async function atualizaTotal() {
-    if (busy) return;
     try {
       const d = await api({ count: true });
-      if (typeof d.total === "number" && !busy) setCount(d.total);
+      if (typeof d.total === "number") setCount(d.total);
     } catch (e) { }
   }
 
@@ -204,21 +203,36 @@
   const cv = document.createElement("canvas"), cx = cv.getContext("2d", { willReadFrequently: true });
   let scanning = false;
 
+  /* Região do vídeo que fica dentro da moldura (o vídeo usa object-fit: cover) */
+  function areaLeitura(v) {
+    const vr = v.getBoundingClientRect(), fr = $(".frame").getBoundingClientRect();
+    const sc = Math.max(vr.width / v.videoWidth, vr.height / v.videoHeight);
+    const ox = (vr.width - v.videoWidth * sc) / 2, oy = (vr.height - v.videoHeight * sc) / 2;
+    let sx = (fr.left - vr.left - ox) / sc, sy = (fr.top - vr.top - oy) / sc;
+    let sw = fr.width / sc, sh = fr.height / sc;
+    sx = Math.max(0, sx); sy = Math.max(0, sy);
+    sw = Math.min(sw, v.videoWidth - sx); sh = Math.min(sh, v.videoHeight - sy);
+    return { sx, sy, sw, sh };
+  }
+
   async function tick() {
     const v = $("#v");
     if (!busy && !scanning && v.readyState >= 2 && v.videoWidth) {
       scanning = true;
       try {
-        let data = "";
-        if (det) { const r = await det.detect(v); if (r.length) data = r[0].rawValue; }
-        if (!data && window.jsQR) {
-          const k = Math.min(1, 960 / v.videoWidth);
-          cv.width = Math.round(v.videoWidth * k); cv.height = Math.round(v.videoHeight * k);
-          cx.drawImage(v, 0, 0, cv.width, cv.height);
-          const q = jsQR(cx.getImageData(0, 0, cv.width, cv.height).data, cv.width, cv.height, { inversionAttempts: "dontInvert" });
-          if (q && q.data) data = q.data;
+        const a = areaLeitura(v);
+        if (a.sw > 20 && a.sh > 20) {
+          const k = Math.min(1, 960 / Math.max(a.sw, a.sh));
+          cv.width = Math.round(a.sw * k); cv.height = Math.round(a.sh * k);
+          cx.drawImage(v, a.sx, a.sy, a.sw, a.sh, 0, 0, cv.width, cv.height);
+          let data = "";
+          if (det) { const r = await det.detect(cv); if (r.length) data = r[0].rawValue; }
+          if (!data && window.jsQR) {
+            const q = jsQR(cx.getImageData(0, 0, cv.width, cv.height).data, cv.width, cv.height, { inversionAttempts: "dontInvert" });
+            if (q && q.data) data = q.data;
+          }
+          if (data) check(data);
         }
-        if (data) check(data);
       } catch (e) { }
       scanning = false;
     }
@@ -272,7 +286,7 @@
     const key = d.error ? "error" : d.status in VIEW ? d.status : "error";
     const m = VIEW[key];
     $("#load").hidden = true;
-    if (typeof d.total === "number") setCount(d.total); else if (key === "ok") setCount(entradas + 1);
+    if (typeof d.total === "number") setCount(d.total); else if (key === "ok") atualizaTotal();
     sinal(SOM[key][0], SOM[key][1]);
 
     const ms = 3000;
@@ -309,7 +323,6 @@
   });
 
   $("#retry").onclick = start;
-  try { const c = parseInt(localStorage.getItem("atmos_entradas"), 10); if (c >= 0) setCount(c); } catch (e) { }
   atualizaTotal();
   setInterval(atualizaTotal, 30000);
 </script>
