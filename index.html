@@ -425,15 +425,19 @@
     }
 
     /* O total é sempre o que a planilha informa; nunca somado no aparelho */
-    let contando = false;
+    let contando = false, carregado = false;
+    function falhaTotal(msg) {
+      if (carregado) return; // já temos um número válido: mantém e tenta de novo no próximo ciclo
+      $("#n").textContent = "!"; $("#nl").textContent = String(msg || "sem total").slice(0, 60);
+    }
     async function atualizaTotal() {
       if (contando || document.hidden) return;
       contando = true;
       try {
         const d = await api({ count: true });
-        if (typeof d.total === "number") setCount(d.total);
-        else { $("#n").textContent = "!"; $("#nl").textContent = String(d.error || "sem total").slice(0, 60); }
-      } catch (e) { $("#n").textContent = "!"; $("#nl").textContent = "sem conexão"; }
+        if (typeof d.total === "number") { carregado = true; setCount(d.total); }
+        else falhaTotal(d.error);
+      } catch (e) { falhaTotal("sem conexão"); }
       contando = false;
     }
 
@@ -600,7 +604,7 @@
       const key = d.error ? "error" : d.status in VIEW ? d.status : "error";
       const m = VIEW[key];
       $("#load").hidden = true;
-      if (typeof d.total === "number") setCount(d.total); else if (key === "ok") atualizaTotal();
+      if (typeof d.total === "number") { carregado = true; setCount(d.total); } else if (key === "ok") atualizaTotal();
       sinal(SOM[key][0], SOM[key][1]);
 
       const ms = 3000;

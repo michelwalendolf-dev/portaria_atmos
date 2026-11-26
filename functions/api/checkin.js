@@ -15,12 +15,17 @@ export async function onRequestPost({ request, env }) {
 async function tratar(request, env) {
   let b; try { b = await request.json(); } catch { return json({ error: "Requisição inválida." }, 400); }
   if (b.count) {
-    try {
-      return json(await sheet(env, { action: "count" }) || { error: "Planilha não configurada." });
-    } catch (e) {
-      console.error(e);
-      return json({ error: "Planilha indisponível: " + String(e.message).slice(0, 100) }, 502);
+    let erro;
+    for (let t = 0; t < 2; t++) {
+      try {
+        return json(await sheet(env, { action: "count" }) || { error: "Planilha não configurada." });
+      } catch (e) {
+        erro = e;
+        await new Promise(r => setTimeout(r, 500));
+      }
     }
+    console.error(erro);
+    return json({ error: "Planilha indisponível: " + String(erro.message).slice(0, 100) }, 502);
   }
   const code = String(b.code || "").trim().toUpperCase();
   if (!/^(?:ATMOS|PULSE)-[0-9A-F]{5}-[0-9A-F]{5}$/.test(code)) return json({ status: "invalid" });
