@@ -432,7 +432,8 @@
       try {
         const d = await api({ count: true });
         if (typeof d.total === "number") setCount(d.total);
-      } catch (e) { }
+        else { $("#n").textContent = "!"; $("#nl").textContent = String(d.error || "sem total").slice(0, 60); }
+      } catch (e) { $("#n").textContent = "!"; $("#nl").textContent = "sem conexão"; }
       contando = false;
     }
 
