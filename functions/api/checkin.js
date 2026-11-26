@@ -36,3 +36,20 @@ async function tratar(request, env) {
     return json({ error: "Planilha indisponível: " + String(e.message).slice(0, 100) }, 502);
   }
 }
+
+// DIAGNÓSTICO TEMPORÁRIO: abra /api/checkin no navegador para ver a resposta crua da planilha. Apague depois.
+export async function onRequestGet({ env }) {
+  if (!env.SHEETS_URL) return json({ diag: "SHEETS_URL não configurada" });
+  try {
+    const r = await fetch(env.SHEETS_URL, {
+      method: "POST",
+      headers: { "Content-Type": "text/plain;charset=utf-8" },
+      body: JSON.stringify({ token: env.SHEETS_TOKEN, action: "count" }),
+      redirect: "follow"
+    });
+    const txt = await r.text();
+    return json({ diag: true, http: r.status, tipo: r.headers.get("content-type"), corpo: txt.slice(0, 300) });
+  } catch (e) {
+    return json({ diag: true, falhou: String(e && e.message || e) });
+  }
+}
