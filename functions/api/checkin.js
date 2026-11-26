@@ -14,7 +14,7 @@ export async function onRequestPost({ request, env }) {
     }
   }
   const code = String(b.code || "").trim().toUpperCase();
-  if (!/^ATMOS-[0-9A-F]{5}-[0-9A-F]{5}$/.test(code)) return json({ status: "invalid" });
+  if (!/^(?:ATMOS|PULSE)-[0-9A-F]{5}-[0-9A-F]{5}$/.test(code)) return json({ status: "invalid" });
   try {
     return json(await sheet(env, { action: "checkin", code }) || { error: "Planilha não configurada." });
   } catch (e) {
