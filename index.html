@@ -439,7 +439,9 @@
 
     async function api(body) {
       const r = await fetch("/api/checkin", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
-      return r.json().catch(() => ({ error: "Erro. Tente de novo." }));
+      const txt = await r.text();
+      try { return JSON.parse(txt); }
+      catch (e) { return { error: "Erro " + r.status + (r.status === 404 ? " (rota /api/checkin não encontrada)" : ". Tente de novo.") }; }
     }
 
     const MSG = {
